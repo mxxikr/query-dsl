@@ -3,6 +3,7 @@ package study.querydsl;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -492,6 +493,23 @@ public class QuerydslBasicTest {
                         rank);
 
             }
+        }
+
+        @Test
+        public void constantAdd() {
+            Tuple result = queryFactory
+                    .select(member.username, Expressions.constant("A"))
+                    .from(member)
+                    .fetchFirst();
+        }
+
+        @Test
+        public void concatAdd() {
+            String result = queryFactory
+                    .select(member.username.concat("_").concat(member.age.stringValue()))
+                    .from(member)
+                    .where(member.username.eq("member1"))
+                    .fetchOne();
         }
 }
 
