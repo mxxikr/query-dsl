@@ -1,5 +1,6 @@
 package study.querydsl;
 
+import com.querydsl.core.QueryResults;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -105,6 +106,46 @@ public class QuerydslBasicTest {
                 .fetch();
 
         assertThat(result1.size()).isEqualTo(1);
+    }
+
+    @Test
+    public void fetch() {
+        //List
+        List<Member> fetch = queryFactory
+                .selectFrom(member)
+                .fetch();
+
+        for (Member fetch1 : fetch) {
+            System.out.println(fetch1.getUsername());
+        }
+        
+        //단 건
+        Member findMember1 = queryFactory
+                .selectFrom(member)
+                .where(member.username.eq("member1"))
+                .fetchOne();
+
+        System.out.println("findMember1 = " + findMember1);
+
+        //처음 한 건 조회
+        Member findMember2 = queryFactory
+                .selectFrom(member)
+                .fetchFirst();
+
+        System.out.println("findMember2 = " + findMember2);
+
+        //페이징에서 사용
+        QueryResults<Member> results = queryFactory
+                .selectFrom(member)
+                .fetchResults();
+
+
+        //count 쿼리로 변경
+        long count = queryFactory
+                .selectFrom(member)
+                .fetchCount();
+
+        System.out.println(count);
     }
 }
 
