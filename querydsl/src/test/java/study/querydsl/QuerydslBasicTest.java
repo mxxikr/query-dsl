@@ -392,124 +392,151 @@ public class QuerydslBasicTest {
                 .containsExactly(40);
         }
 
-        /**
-         * 나이가 평균 나이 이상인 회원
-         */
-        @Test
-        public void subQueryGoe() throws Exception {
-            QMember memberSub = new QMember("memberSub");
-            List<Member> result = queryFactory
-                    .selectFrom(member)
-                    .where(member.age.goe(
-                            select(memberSub.age.avg())
-                                    .from(memberSub)
-                    ))
-                    .fetch();
+    /**
+     * 나이가 평균 나이 이상인 회원
+     */
+    @Test
+    public void subQueryGoe() throws Exception {
+        QMember memberSub = new QMember("memberSub");
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .where(member.age.goe(
+                        select(memberSub.age.avg())
+                                .from(memberSub)
+                ))
+                .fetch();
 
-            assertThat(result).extracting("age")
-                    .containsExactly(30,40);
+        assertThat(result).extracting("age")
+                .containsExactly(30,40);
+    }
+
+    /**
+     * 서브쿼리 여러 건 처리, in 사용
+     */
+    @Test
+    public void subQueryIn() throws Exception {
+        QMember memberSub = new QMember("memberSub");
+
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .where(member.age.in(
+                        select(memberSub.age)
+                                .from(memberSub)
+                                .where(memberSub.age.gt(10))
+                ))
+                .fetch();
+
+        assertThat(result).extracting("age")
+                .containsExactly(20, 30, 40);
+
+    }
+
+    @Test
+    public void subQuerySelect() throws Exception {
+        QMember memberSub = new QMember("memberSub");
+
+        List<Tuple> fetch = queryFactory
+                .select(member.username,
+                        select(memberSub.age.avg())
+                                .from(memberSub)
+                ).from(member)
+                .fetch();
+
+        for (Tuple tuple : fetch) {
+            System.out.println("username = " + tuple.get(member.username));
+            System.out.println("age = " +
+                    tuple.get(select(memberSub.age.avg())
+                            .from(memberSub)));
         }
+    }
 
-        /**
-         * 서브쿼리 여러 건 처리, in 사용
-         */
-        @Test
-        public void subQueryIn() throws Exception {
-            QMember memberSub = new QMember("memberSub");
+    @Test
+    public void case1() {
+        List<String> result = queryFactory
+                .select(member.age
+                        .when(10).then("열살")
+                        .when(20).then("스무살")
+                        .otherwise("기타"))
+                .from(member)
+                .fetch();
+    }
 
-            List<Member> result = queryFactory
-                    .selectFrom(member)
-                    .where(member.age.in(
-                            select(memberSub.age)
-                                    .from(memberSub)
-                                    .where(memberSub.age.gt(10))
-                    ))
-                    .fetch();
+    @Test
+    public void case2() {
+        List<String> result = queryFactory
+                .select(new CaseBuilder()
+                        .when(member.age.between(0, 20)).then("0~20살")
+                        .when(member.age.between(21, 30)).then("21~30살")
+                        .otherwise("기타"))
+                .from(member)
+                .fetch();
+    }
 
-            assertThat(result).extracting("age")
-                    .containsExactly(20, 30, 40);
+    @Test
+    public void caseOrderBy() {
+        NumberExpression<Integer> rankPath = new CaseBuilder()
+                .when(member.age.between(0, 20)).then(2)
+                .when(member.age.between(21, 30)).then(1)
+                .otherwise(3);
+
+        List<Tuple> result = queryFactory
+                .select(member.username, member.age, rankPath)
+                .from(member)
+                .orderBy(rankPath.desc())
+                .fetch();
+
+        for (Tuple tuple : result) {
+            String username = tuple.get(member.username);
+            Integer age = tuple.get(member.age);
+            Integer rank = tuple.get(rankPath);
+            System.out.println("username = " + username + " age = " + age + " rank = " +
+                    rank);
 
         }
+    }
 
-        @Test
-        public void subQuerySelect() throws Exception {
-            QMember memberSub = new QMember("memberSub");
+    @Test
+    public void constantAdd() {
+        Tuple result = queryFactory
+                .select(member.username, Expressions.constant("A"))
+                .from(member)
+                .fetchFirst();
+    }
 
-            List<Tuple> fetch = queryFactory
-                    .select(member.username,
-                            select(memberSub.age.avg())
-                                    .from(memberSub)
-                    ).from(member)
-                    .fetch();
+    @Test
+    public void concatAdd() {
+        String result = queryFactory
+                .select(member.username.concat("_").concat(member.age.stringValue()))
+                .from(member)
+                .where(member.username.eq("member1"))
+                .fetchOne();
+    }
 
-            for (Tuple tuple : fetch) {
-                System.out.println("username = " + tuple.get(member.username));
-                System.out.println("age = " +
-                        tuple.get(select(memberSub.age.avg())
-                                .from(memberSub)));
-            }
+    @Test
+    public void simpleProjection() {
+        List<String> result = queryFactory
+                .select(member.username)
+                .from(member)
+                .fetch();
+
+        for (String s : result) {
+            System.out.println("s = " + s);
         }
+    }
 
-        @Test
-        public void case1() {
-            List<String> result = queryFactory
-                    .select(member.age
-                            .when(10).then("열살")
-                            .when(20).then("스무살")
-                            .otherwise("기타"))
-                    .from(member)
-                    .fetch();
+    @Test
+    public void tupleProjection(){
+        List<Tuple> result = queryFactory
+                .select(member.username, member.age)
+                .from(member)
+                .fetch();
+
+        for (Tuple tuple : result) {
+            String username = tuple.get(member.username);
+            Integer age = tuple.get(member.age);
+            System.out.println("username = " + username);
+            System.out.println("age = " + age);
         }
-
-        @Test
-        public void case2() {
-            List<String> result = queryFactory
-                    .select(new CaseBuilder()
-                            .when(member.age.between(0, 20)).then("0~20살")
-                            .when(member.age.between(21, 30)).then("21~30살")
-                            .otherwise("기타"))
-                    .from(member)
-                    .fetch();
-        }
-
-        @Test
-        public void caseOrderBy() {
-            NumberExpression<Integer> rankPath = new CaseBuilder()
-                    .when(member.age.between(0, 20)).then(2)
-                    .when(member.age.between(21, 30)).then(1)
-                    .otherwise(3);
-
-            List<Tuple> result = queryFactory
-                    .select(member.username, member.age, rankPath)
-                    .from(member)
-                    .orderBy(rankPath.desc())
-                    .fetch();
-
-            for (Tuple tuple : result) {
-                String username = tuple.get(member.username);
-                Integer age = tuple.get(member.age);
-                Integer rank = tuple.get(rankPath);
-                System.out.println("username = " + username + " age = " + age + " rank = " +
-                        rank);
-
-            }
-        }
-
-        @Test
-        public void constantAdd() {
-            Tuple result = queryFactory
-                    .select(member.username, Expressions.constant("A"))
-                    .from(member)
-                    .fetchFirst();
-        }
-
-        @Test
-        public void concatAdd() {
-            String result = queryFactory
-                    .select(member.username.concat("_").concat(member.age.stringValue()))
-                    .from(member)
-                    .where(member.username.eq("member1"))
-                    .fetchOne();
-        }
+    }
 }
 
