@@ -1,4 +1,4 @@
-      김영한님의 [실전! Querydsl](https://www.inflearn.com/course/querydsl-%EC%8B%A4%EC%A0%84/dashboard?cid=324476) 실습 코드 아카이브
+김영한님의 [실전! Querydsl](https://www.inflearn.com/course/querydsl-%EC%8B%A4%EC%A0%84/dashboard?cid=324476) 실습 코드 아카이브
 
 ---
 
